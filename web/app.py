@@ -179,3 +179,87 @@ class Transfer(Resource):
         updateAccount(username, cash_from - money)
 
         return jsonify(generateReturnDictionary(200, "Amount Transfered successfully"))
+
+
+class Balance(Resource):
+    def post(self):
+        postedData = request.get_json()
+
+        username = postedData["username"]
+        password = postedData["password"]
+
+        retJson, error = verifyCredentials(username, password)
+
+        if error:
+            return jsonify(retJson)
+
+        retJson = users.find({
+            "Username": username
+        }, {
+            "Password": 0,
+            "_id": 0
+        })[0]
+
+        return jsonify(retJson)
+
+
+class TakeLoan(Resource):
+    def post(self):
+        postedData = request.get_json()
+
+        username = postedData["username"]
+        password = postedData["password"]
+        money    = postedData["amount"]
+
+        retJson, error = verifyCredentials(username, password)
+
+        if error:
+            return jsonify(retJson)
+        
+        cash = amountOwned(username)
+        debt = updateDebt(username)
+
+        updateAccount(username, cash+money)
+        updateDebt(username, debt + money)
+
+        return jsonify(generateReturnDictionary(200, "Loan added to your account"))
+
+
+
+class PayLoan(Resource):
+    def post(self):
+        postedData = request.get_json()
+
+        username = postedData["username"]
+        password = postedData["password"]
+
+        retJson, error = verifyCredentials(username, password)
+
+        if error:
+            return jsonify(retJson)
+
+        
+        cash = amountOwned(username)
+
+        if cash < money:
+            return jsonify(generateReturnDictionary(303, "not enough cash in your account"))
+
+         debt = userDebt(username)
+
+         updateAccount(username, cash - money)
+         updateDebt(username, debt - money)
+
+         return jsonify(generateReturnDictionary(200, "you have successfully paid your loan"))
+
+
+
+api.add_resource(Register, '/register')
+api.add_resource(Add, '/add')
+api.add_resource(Transfer, '/transfer')
+api.add_resource(Balance, '/balance')
+api.add_resource(TakeLoan, '/takeloan')
+api.add_resource(PayLoan, '/payloan')
+
+
+if __name__ == "__main__":
+    app.run(host='0.0.0.0')
